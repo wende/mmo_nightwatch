@@ -23,8 +23,8 @@ defmodule MmoNightwatch.Board do
     %Board{width: width, height: height, tiles: Map.new(tiles)}
   end
 
-  @spec get_adjacent(Board.t(), x :: integer, y :: integer) :: [{}]
-  def get_adjacent(board = %Board{}, x, y) do
+  @spec get_adjacent(Board.t(), {x :: integer, y :: integer}) :: [{}]
+  def get_adjacent(board = %Board{}, {x, y}) do
     @adjacent
     |> Enum.map(fn {dx, dy} -> field(board, x + dx, y + dy) end)
     |> Enum.uniq()

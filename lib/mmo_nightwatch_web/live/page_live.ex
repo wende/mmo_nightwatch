@@ -20,8 +20,7 @@ defmodule MmoNightwatchWeb.PageLive do
   def render(assigns) do
     ~H"""
     <div id="Title" style="position: relative">
-    <%= @time %>
-    <%= @key %>
+    WASD To Move. E to attack
     </div>
     <div class="main-container" phx-window-keydown="keydown" style="position: relative">
     <%= for {{x, y}, content} <- @state.board.tiles do %>
@@ -35,22 +34,23 @@ defmodule MmoNightwatchWeb.PageLive do
               height: 50px;"}
       ></div>
     <% end %>
-    <%= for {name, {x, y}} <- @state.heroes do %>
+    <%= for {name, %{pos: {x, y}, alive: alive}} <- @state.heroes do %>
       <div
       style={"display: block;
               position: absolute;
               left: #{x * 50 + 10}px;
               top: #{y * 50 + 10}px;
+              text-decoration: #{ if alive, do: "default", else: "line-through" };
               background-color: red ;
               color: black;
               width: 30px;
-              height: 30px;"}
-      > <%= name %> </div>
+              height: 30px;"}>
+      <%= name %> </div>
     <% end %>
     <div style={"display: block;
               position: absolute;
-              left: #{elem(@state.heroes[@name], 0) * 50 + 10}px;
-              top: #{elem(@state.heroes[@name], 1) * 50 + 10}px;
+              left: #{elem(@state.heroes[@name].pos, 0) * 50 + 10}px;
+              top: #{elem(@state.heroes[@name].pos, 1) * 50 + 10}px;
               background-color: blue ;
               color: white;
               z-index: 1;
@@ -88,7 +88,8 @@ defmodule MmoNightwatchWeb.PageLive do
       "s" -> :ok = GameState.move_hero(socket.assigns.name, :down)
       "a" -> :ok = GameState.move_hero(socket.assigns.name, :left)
       "d" -> :ok = GameState.move_hero(socket.assigns.name, :right)
-      " " -> :ok = GameState.attack(socket.assigns.name)
+      "e" -> :ok = GameState.attack(socket.assigns.name)
+      "r" -> :ok = GameState.exit()
       _ -> :ok
     end
 
