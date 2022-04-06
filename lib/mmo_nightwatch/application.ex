@@ -15,9 +15,9 @@ defmodule MmoNightwatch.Application do
       # Start the PubSub system
       {Phoenix.PubSub, name: MmoNightwatch.PubSub},
       # Start the Endpoint (http/https)
-      MmoNightwatchWeb.Endpoint
+      MmoNightwatchWeb.Endpoint,
       # Start a worker by calling: MmoNightwatch.Worker.start_link(arg)
-      # {MmoNightwatch.Worker, arg}
+      {MmoNightwatch.GameState, name: MmoNightwatch.GameState}
     ]
 
     # See https://hexdocs.pm/elixir/Supervisor.html

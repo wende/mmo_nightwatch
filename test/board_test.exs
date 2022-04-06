@@ -9,4 +9,8 @@ defmodule MmoNightwatch.BoardTest do
 
     assert Board.get_adjacent(@board, 0, 0) == [{0, 0}, {0, 1}, {1, 0}, {1, 1}]
   end
+
+  test "Checks possible movement" do
+    @board
+  end
 end
