@@ -7,9 +7,6 @@
 # General application configuration
 import Config
 
-config :mmo_nightwatch,
-  ecto_repos: [MmoNightwatch.Repo]
-
 # Configures the endpoint
 config :mmo_nightwatch, MmoNightwatchWeb.Endpoint,
   url: [host: "localhost"],
