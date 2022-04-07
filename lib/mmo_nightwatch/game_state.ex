@@ -1,51 +1,87 @@
 defmodule MmoNightwatch.GameState do
+  @moduledoc """
+  GenServer responsible for all highest level decision about game session.
+  It serves as an intermediary between the end user and game rules, as well as
+  logic coordinator in interactions between MmoNightwatch.HeroState GenServers
+  """
+
   alias MmoNightwatch.Board
   alias MmoNightwatch.GameSupervisor
   alias MmoNightwatch.HeroState
 
   use GenServer
+  @type t() :: %__MODULE__{board: Board.t() | nil, heroes: %{String.t() => pid}}
+  defstruct board: nil, heroes: %{}
 
+  @spec board_width() :: integer()
   def board_width(),
     do: Application.fetch_env!(:mmo_nightwatch, MmoNightwatch.GameState)[:board_width]
 
+  @spec board_height() :: integer()
   def board_height(),
     do: Application.fetch_env!(:mmo_nightwatch, MmoNightwatch.GameState)[:board_height]
 
+  @spec respawn_timeout() :: integer()
   def respawn_timeout(),
     do: Application.fetch_env!(:mmo_nightwatch, MmoNightwatch.GameState)[:respawn_timeout]
 
+  @spec get_state() :: __MODULE__.t()
+  def get_state() do
+    GenServer.call(__MODULE__, :get_state)
+  end
+
+  @doc """
+  Ensures hero exists. If it does, returns the existing pid of a hero and its position.
+  If it doesn't creates a new hero at a random position and returns its pid and position
+  """
+  @spec ensure_hero(String.t()) :: {:ok, pid(), {integer(), integer()}}
+  def ensure_hero(name) do
+    GenServer.call(__MODULE__, {:ensure_hero, name})
+  end
+
+  @doc """
+  Removes the hero from the board and cleans up all the processes
+  """
+  @spec remove_hero(String.t()) :: :ok
+  def remove_hero(name) do
+    GenServer.cast(__MODULE__, {:remove_hero, name})
+  end
+
+  @doc """
+  Moves a hero in one of four directions. Updates heroes internal state
+  """
+  @spec move_hero(String.t(), :up | :down | :left | :right) :: :ok
+  def move_hero(name, direction) do
+    GenServer.cast(__MODULE__, {:move_hero, name, direction})
+  end
+
+  @doc """
+  Attacks all heroes in adjacent tiles to the casting hero.
+  Attacked heroes die chaning their state of alive to false
+  Dead heroes respawn after a timeout set in config
+  """
+  @spec attack(String.t()) :: :ok
+  def attack(name) do
+    GenServer.cast(__MODULE__, {:attack, name})
+  end
+
+  ## Callbacks
+
+  @spec start_link([]) :: :ignore | {:error, any} | {:ok, pid}
   def start_link([]) do
     GenServer.start_link(__MODULE__, :ok, name: __MODULE__)
   end
 
+  @spec init(any) :: {:ok, __MODULE__.t()}
   def init(_) do
     {:ok,
-     %{
+     %__MODULE__{
        board: Board.new(board_width(), board_height()),
        heroes: %{}
      }}
   end
 
-  def get_state() do
-    GenServer.call(__MODULE__, :get_state)
-  end
-
-  def ensure_hero(name) do
-    GenServer.call(__MODULE__, {:ensure_hero, name})
-  end
-
-  def remove_hero(name) do
-    GenServer.cast(__MODULE__, {:remove_hero, name})
-  end
-
-  def move_hero(name, direction) do
-    GenServer.cast(__MODULE__, {:move_hero, name, direction})
-  end
-
-  def attack(name) do
-    GenServer.cast(__MODULE__, {:attack, name})
-  end
-
+  @spec exit :: :ok
   def exit() do
     GenServer.stop(__MODULE__, :kill)
   end
