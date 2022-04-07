@@ -1,4 +1,7 @@
 defmodule MmoNightwatch.LiveMonitor do
+  @moduledoc """
+  Helper module to monitor live cycle of PhoenixLiveView websocket connections
+  """
   use GenServer
 
   def start_link([]) do

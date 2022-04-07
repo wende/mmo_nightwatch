@@ -1,19 +1,14 @@
-# MmoNightwatch
+# Nightwatch MMO Game Assignment
 
-To start your Phoenix server:
+Release at: https://murmuring-beach-35202.herokuapp.com/game
 
-  * Install dependencies with `mix deps.get`
-  * Create and migrate your database with `mix ecto.setup`
-  * Start Phoenix endpoint with `mix phx.server` or inside IEx with `iex -S mix phx.server`
+### Stack used
+- Phoenix
+- Phoenix LiveView
 
-Now you can visit [`localhost:4000`](http://localhost:4000) from your browser.
 
-Ready to run in production? Please [check our deployment guides](https://hexdocs.pm/phoenix/deployment.html).
+### Points of concern
 
-## Learn more
-
-  * Official website: https://www.phoenixframework.org/
-  * Guides: https://hexdocs.pm/phoenix/overview.html
-  * Docs: https://hexdocs.pm/phoenix
-  * Forum: https://elixirforum.com/c/phoenix-forum
-  * Source: https://github.com/phoenixframework/phoenix
+Supervision trees: (Application)[lib/mmo_nightwatch/application.ex] and (GameSupervisor)[lib/mmo_nightwatch/game_supervisor.ex]
+Main Logic: (Board)[lib/mmo_nightwatch/board.ex], (GameState)[lib/mmo_nightwatch/game_state.ex], (HeroState)[lib/mmonightwatch/hero_state.ex] and (LiveMonitor)[lib/mmo_nightwatch/live_monitor.ex]
+Tests: (BoardTest)[test/board_test.exs] and (GameStateTest)[test/game_state_test.exs]
