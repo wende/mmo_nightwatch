@@ -18,4 +18,8 @@ defmodule MmoNightwatch.GameSupervisor do
   def start_hero(opts) do
     DynamicSupervisor.start_child(MmoNightwatch.HeroSupervisor, {MmoNightwatch.HeroState, opts})
   end
+
+  def stop_hero(pid) do
+    DynamicSupervisor.terminate_child(MmoNightwatch.HeroSupervisor, pid)
+  end
 end

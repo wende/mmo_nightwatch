@@ -4,7 +4,6 @@ defmodule MmoNightwatchWeb.PageLive do
   alias MmoNightwatch.GameState
   alias MmoNightwatch.HeroState
   alias MmoNightwatch.LiveMonitor
-  alias MmoNightwatch.GameSupervisor
 
   @tick 30
 
@@ -80,8 +79,8 @@ defmodule MmoNightwatchWeb.PageLive do
 
   def mount(params, _session, socket) do
     name = params["hero"] || Enum.random(@names)
-    LiveMonitor.monitor(self, __MODULE__, name)
-    {:ok, pid, {x, y}} = GameState.ensure_hero(name)
+    LiveMonitor.monitor(self(), __MODULE__, name)
+    {:ok, pid, {_x, _y}} = GameState.ensure_hero(name)
 
     # Link to the hero genserver so that it dies with this WebSocket and vice versa
     Process.link(pid)
@@ -91,7 +90,7 @@ defmodule MmoNightwatchWeb.PageLive do
       Process.send_after(self(), :tick, 100)
     end
 
-    {:ok, assign(socket, name: name, time: "10:00", key: "None", state: GameState.get_state())}
+    {:ok, assign(socket, name: name, time: "", state: GameState.get_state())}
   end
 
   def unmount(name, _reason) do
@@ -116,7 +115,7 @@ defmodule MmoNightwatchWeb.PageLive do
     socket
   end
 
-  def handle_info({:DOWN, _ref, :process, pid, reason}, state) do
+  def handle_info({:DOWN, _ref, :process, _pid, _reason}, state) do
     Process.exit(self(), :normal)
     {:noreply, state}
   end

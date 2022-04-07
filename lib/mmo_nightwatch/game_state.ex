@@ -5,7 +5,14 @@ defmodule MmoNightwatch.GameState do
 
   use GenServer
 
-  @respawn_timeout 5000
+  def board_width(),
+    do: Application.fetch_env!(:mmo_nightwatch, MmoNightwatch.GameState)[:board_width]
+
+  def board_height(),
+    do: Application.fetch_env!(:mmo_nightwatch, MmoNightwatch.GameState)[:board_height]
+
+  def respawn_timeout(),
+    do: Application.fetch_env!(:mmo_nightwatch, MmoNightwatch.GameState)[:respawn_timeout]
 
   def start_link([]) do
     GenServer.start_link(__MODULE__, :ok, name: __MODULE__)
@@ -14,7 +21,7 @@ defmodule MmoNightwatch.GameState do
   def init(_) do
     {:ok,
      %{
-       board: Board.new(20, 20),
+       board: Board.new(board_width(), board_height()),
        heroes: %{}
      }}
   end
@@ -61,6 +68,7 @@ defmodule MmoNightwatch.GameState do
   end
 
   def handle_cast({:remove_hero, hero}, state) do
+    :ok = GameSupervisor.stop_hero(state.heroes[hero])
     {:noreply, %{state | heroes: Map.delete(state.heroes, hero)}}
   end
 
@@ -97,7 +105,7 @@ defmodule MmoNightwatch.GameState do
       |> Enum.filter(fn %{name: victim, position: pos} -> victim != hero && pos in adjacents end)
       |> Enum.each(fn %{name: victim, alive: alive} ->
         if(alive) do
-          :timer.send_after(@respawn_timeout, self(), {:respawn, victim})
+          :timer.send_after(respawn_timeout(), self(), {:respawn, victim})
           :ok = HeroState.die(state.heroes[victim])
         end
       end)

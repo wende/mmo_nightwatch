@@ -26,6 +26,11 @@ config :mmo_nightwatch, MmoNightwatchWeb.Endpoint,
 # at the `config/runtime.exs`.
 config :mmo_nightwatch, MmoNightwatch.Mailer, adapter: Swoosh.Adapters.Local
 
+config :mmo_nightwatch, MmoNightwatch.GameState,
+  respawn_timeout: 5000,
+  board_width: 20,
+  board_height: 20
+
 # Swoosh API client is needed for adapters other than SMTP.
 config :swoosh, :api_client, false
 
