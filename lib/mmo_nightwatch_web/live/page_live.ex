@@ -1,6 +1,12 @@
 defmodule MmoNightwatchWeb.PageLive do
   use MmoNightwatchWeb, :live_view
+
   alias MmoNightwatch.GameState
+  alias MmoNightwatch.HeroState
+  alias MmoNightwatch.LiveMonitor
+  alias MmoNightwatch.GameSupervisor
+
+  @tick 30
 
   @names """
          Ashwin Madden
@@ -18,6 +24,12 @@ defmodule MmoNightwatchWeb.PageLive do
          |> String.split("\n")
 
   def render(assigns) do
+    heroes =
+      Enum.map(assigns.state.heroes, fn {k, v} ->
+        {k, HeroState.get_state(v)}
+      end)
+      |> Enum.into(%{})
+
     ~H"""
     <div id="Title" style="position: relative">
     WASD To Move. E to attack
@@ -34,7 +46,7 @@ defmodule MmoNightwatchWeb.PageLive do
               height: 50px;"}
       ></div>
     <% end %>
-    <%= for {name, %{pos: {x, y}, alive: alive}} <- @state.heroes do %>
+    <%= for {name, %{position: {x, y}, alive: alive}} <- heroes, name != @name do %>
       <div
       style={"display: block;
               position: absolute;
@@ -49,8 +61,8 @@ defmodule MmoNightwatchWeb.PageLive do
     <% end %>
     <div style={"display: block;
               position: absolute;
-              left: #{elem(@state.heroes[@name].pos, 0) * 50 + 10}px;
-              top: #{elem(@state.heroes[@name].pos, 1) * 50 + 10}px;
+              left: #{elem(Map.get(heroes, @name).position, 0) * 50 + 10}px;
+              top: #{elem(Map.get(heroes, @name).position, 1) * 50 + 10}px;
               background-color: blue ;
               color: white;
               z-index: 1;
@@ -68,14 +80,22 @@ defmodule MmoNightwatchWeb.PageLive do
 
   def mount(params, _session, socket) do
     name = params["hero"] || Enum.random(@names)
+    LiveMonitor.monitor(self, __MODULE__, name)
+    {:ok, pid, {x, y}} = GameState.ensure_hero(name)
+
+    # Link to the hero genserver so that it dies with this WebSocket and vice versa
+    Process.link(pid)
+    Process.monitor(GameState)
 
     if connected?(socket) do
       Process.send_after(self(), :tick, 100)
     end
 
-    :ok = GameState.ensure_hero(name)
-
     {:ok, assign(socket, name: name, time: "10:00", key: "None", state: GameState.get_state())}
+  end
+
+  def unmount(name, _reason) do
+    :ok = GameState.remove_hero(name)
   end
 
   def handle_event("keydown", %{"key" => key}, socket) do
@@ -96,8 +116,13 @@ defmodule MmoNightwatchWeb.PageLive do
     socket
   end
 
+  def handle_info({:DOWN, _ref, :process, pid, reason}, state) do
+    Process.exit(self(), :normal)
+    {:noreply, state}
+  end
+
   def handle_info(:tick, socket) do
-    Process.send_after(self(), :tick, 100)
+    Process.send_after(self(), :tick, @tick)
     {:noreply, assign(socket, state: GameState.get_state(), time: DateTime.utc_now())}
   end
 end

@@ -17,7 +17,8 @@ defmodule MmoNightwatch.Application do
       # Start the Endpoint (http/https)
       MmoNightwatchWeb.Endpoint,
       # Start a worker by calling: MmoNightwatch.Worker.start_link(arg)
-      {MmoNightwatch.GameState, name: MmoNightwatch.GameState}
+      MmoNightwatch.GameSupervisor,
+      MmoNightwatch.LiveMonitor
     ]
 
     # See https://hexdocs.pm/elixir/Supervisor.html

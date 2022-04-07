@@ -54,4 +54,11 @@ defmodule MmoNightwatch.Board do
   def walkable(board, {x, y}) do
     board.tiles[{x, y}] != :wall
   end
+
+  def get_random_position(board) do
+    randx = floor(:rand.uniform() * board.width)
+    randy = floor(:rand.uniform() * board.height)
+
+    {randx, randy}
+  end
 end

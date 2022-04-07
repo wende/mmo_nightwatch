@@ -1,11 +1,14 @@
 defmodule MmoNightwatch.GameState do
   alias MmoNightwatch.Board
+  alias MmoNightwatch.GameSupervisor
+  alias MmoNightwatch.HeroState
+
   use GenServer
 
   @respawn_timeout 5000
 
-  def start_link(name: name) do
-    GenServer.start_link(__MODULE__, %{}, name: name)
+  def start_link([]) do
+    GenServer.start_link(__MODULE__, :ok, name: __MODULE__)
   end
 
   def init(_) do
@@ -24,12 +27,16 @@ defmodule MmoNightwatch.GameState do
     GenServer.call(__MODULE__, {:ensure_hero, name})
   end
 
+  def remove_hero(name) do
+    GenServer.cast(__MODULE__, {:remove_hero, name})
+  end
+
   def move_hero(name, direction) do
-    GenServer.call(__MODULE__, {:move_hero, name, direction})
+    GenServer.cast(__MODULE__, {:move_hero, name, direction})
   end
 
   def attack(name) do
-    GenServer.call(__MODULE__, {:attack, name})
+    GenServer.cast(__MODULE__, {:attack, name})
   end
 
   def exit() do
@@ -41,56 +48,68 @@ defmodule MmoNightwatch.GameState do
   end
 
   def handle_call({:ensure_hero, hero}, _, state) do
-    if(Map.has_key?(state.heroes, hero)) do
-      {:reply, :ok, state}
+    if(Map.has_key?(state.heroes, hero) && Process.alive?(state.heroes[hero])) do
+      pid = state.heroes[hero]
+      {x, y} = HeroState.get_position(pid)
+      {:reply, {:ok, pid, {x, y}}, state}
     else
-      {:reply, :ok, spawn_hero(state, hero)}
+      {x, y} = Board.get_random_position(state.board)
+      {:ok, pid} = GameSupervisor.start_hero(%{name: hero, position: {x, y}})
+
+      {:reply, {:ok, pid, {x, y}}, put_in(state.heroes[hero], pid)}
     end
   end
 
-  def handle_call({:move_hero, hero, direction}, _, state) do
+  def handle_cast({:remove_hero, hero}, state) do
+    {:noreply, %{state | heroes: Map.delete(state.heroes, hero)}}
+  end
+
+  def handle_cast({:move_hero, hero, direction}, state) do
+    pid = state.heroes[hero]
+    hero_state = HeroState.get_state(pid)
+
     new_position =
-      if state.heroes[hero].alive do
+      if hero_state.alive do
         case direction do
-          :up -> Board.up(state.board, state.heroes[hero].pos)
-          :down -> Board.down(state.board, state.heroes[hero].pos)
-          :right -> Board.right(state.board, state.heroes[hero].pos)
-          :left -> Board.left(state.board, state.heroes[hero].pos)
+          :up -> Board.up(state.board, hero_state.position)
+          :down -> Board.down(state.board, hero_state.position)
+          :right -> Board.right(state.board, hero_state.position)
+          :left -> Board.left(state.board, hero_state.position)
           _ -> state.heroes[hero]
         end
       else
-        state.heroes[hero].pos
+        hero_state.position
       end
 
-    {:reply, :ok, put_in(state, [:heroes, Access.key(hero), :pos], new_position)}
+    :ok = HeroState.move(pid, new_position)
+
+    {:noreply, state}
   end
 
-  def handle_call({:attack, hero}, _, state) do
-    adjacents = Board.get_adjacent(state.board, state.heroes[hero].pos)
+  def handle_cast({:attack, hero}, state) do
+    hero_state = HeroState.get_state(state.heroes[hero])
 
-    new_state =
+    if hero_state.alive do
+      adjacents = Board.get_adjacent(state.board, hero_state.position)
+
       state.heroes
-      |> Enum.filter(fn {victim, %{pos: pos}} -> victim != hero && pos in adjacents end)
-      |> IO.inspect()
-      |> Enum.reduce(
-        state,
-        fn {victim, _}, state_acc ->
+      |> Enum.map(&HeroState.get_state(elem(&1, 1)))
+      |> Enum.filter(fn %{name: victim, position: pos} -> victim != hero && pos in adjacents end)
+      |> Enum.each(fn %{name: victim, alive: alive} ->
+        if(alive) do
           :timer.send_after(@respawn_timeout, self(), {:respawn, victim})
-          put_in(state_acc, [:heroes, Access.key(victim), :alive], false)
+          :ok = HeroState.die(state.heroes[victim])
         end
-      )
+      end)
+    end
 
-    {:reply, :ok, new_state}
+    {:noreply, state}
   end
 
   def handle_info({:respawn, hero}, state) do
-    {:noreply, spawn_hero(state, hero)}
-  end
-
-  defp spawn_hero(state, name) do
-    randx = floor(:rand.uniform() * state.board.width)
-    randy = floor(:rand.uniform() * state.board.height)
-
-    %{state | heroes: Map.put(state.heroes, name, %{pos: {randx, randy}, alive: true})}
+    pid = state.heroes[hero]
+    :ok = HeroState.respawn(pid)
+    :ok = HeroState.move(pid, Board.get_random_position(state.board))
+    {:noreply, state}
   end
 end
